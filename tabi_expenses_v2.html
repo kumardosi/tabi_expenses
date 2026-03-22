@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="旅 Expenses">
+<meta name="theme-color" content="#1a1a2e">
+<title>旅 Expenses</title>
+
+<!-- PWA Manifest inline -->
+<script>
+const manifestData = {
+  name: "旅 Expenses — Japan Trip",
+  short_name: "旅 Expenses",
+  description: "Japan trip expense tracker",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#1a1a2e",
+  theme_color: "#1a1a2e",
+  orientation: "portrait",
+  icons: [
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%231a1a2e'/%3E%3Ccircle cx='96' cy='96' r='72' fill='%23C8102E'/%3E%3Ccircle cx='96' cy='96' r='28' fill='white'/%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231a1a2e'/%3E%3Ccircle cx='256' cy='256' r='192' fill='%23C8102E'/%3E%3Ccircle cx='256' cy='256' r='72' fill='white'/%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+document.write(`<link rel="manifest" href="${manifestURL}">`);
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --red:    #C8102E;
+  --red-lt: #fff0f2;
+  --navy:   #1a1a2e;
+  --mid:    #3d3d5c;
+  --soft:   #7b7b9a;
+  --paper:  #fafaf7;
+  --warm:   #f5f3ee;
+  --border: #e2e0d8;
+  --gold:   #c9a84c;
+  --green:  #2d7a4f; --green-lt: #eef7f2;
+  --amber:  #d97706; --amber-lt: #fffbeb;
+  --blue:   #1d6fa4; --blue-lt:  #eff7ff;
+  --r:  14px;
+  --rs: 10px;
+  --sh: 0 2px 10px rgba(26,26,46,0.08);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--paper);
+  color: var(--navy);
+  display: flex;
+  flex-direction: column;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* ── HEADER ── */
+.hdr {
+  background: var(--navy);
+  padding: calc(12px + var(--safe-top)) 16px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.hdr-logo { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 900; font-size: 19px; color: white; letter-spacing: -0.5px; }
+.hdr-logo em { color: var(--red); font-style: normal; }
+.hdr-sub { font-size: 8.5px; color: rgba(255,255,255,0.38); letter-spacing: 1.6px; text-transform: uppercase; margin-top: 1px; }
+.hdr-right { text-align: right; }
+.hdr-lbl { font-size: 8.5px; color: rgba(255,255,255,0.38); text-transform: uppercase; letter-spacing: 1px; }
+.hdr-total { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 18px; font-weight: 700; color: var(--gold); }
+.hdr-cnt { font-size: 8.5px; color: rgba(255,255,255,0.28); margin-top: 1px; }
+
+/* ── TAB BAR ── */
+.tabs {
+  background: var(--navy);
+  display: flex;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 0 2px calc(4px + 0px);
+  flex-shrink: 0;
+}
+.tab {
+  flex: 1; border: none; background: transparent;
+  color: rgba(255,255,255,0.35);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 9px; cursor: pointer;
+  border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 6px 2px 4px;
+  transition: all 0.18s;
+}
+.tab .ti { font-size: 17px; }
+.tab.on { background: rgba(200,16,46,0.16); color: #ff6b81; }
+
+/* ── SCREENS ── */
+.screens { flex: 1; overflow: hidden; position: relative; }
+.scr {
+  position: absolute; inset: 0;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 12px 14px calc(20px + var(--safe-bot));
+  opacity: 0; pointer-events: none; transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.scr.on { opacity: 1; pointer-events: all; transform: translateY(0); }
+
+/* ── FORM SECTIONS ── */
+.fsec { background: white; border-radius: var(--r); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--sh); margin-bottom: 11px; }
+.fsec-hdr { padding: 8px 14px 6px; background: var(--warm); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.snum { width: 19px; height: 19px; background: var(--red); color: white; border-radius: 50%; font-size: 9.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.slbl { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--mid); }
+.fbody { padding: 11px 14px; }
+
+/* ── DATE ── */
+input[type=date] {
+  width: 100%; padding: 10px 12px;
+  border: 1.5px solid var(--border); border-radius: var(--rs);
+  font-family: inherit; font-size: 16px; color: var(--navy);
+  background: var(--paper); outline: none; -webkit-appearance: none;
+}
+input[type=date]:focus { border-color: var(--red); }
+
+/* ── CURRENCY ── */
+.curr-row { display: flex; gap: 7px; }
+.curr-btn {
+  flex: 1; padding: 9px 4px;
+  border: 2px solid var(--border); border-radius: var(--rs);
+  background: white; font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 14px; font-weight: 700; color: var(--mid);
+  cursor: pointer; text-align: center; transition: all 0.14s;
+}
+.curr-btn.on { border-color: var(--red); background: var(--red-lt); color: var(--red); }
+.curr-sub { font-size: 9.5px; display: block; color: var(--soft); font-weight: 400; margin-top: 1px; }
+
+/* ── CATEGORIES ── */
+.cg-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--soft); padding: 7px 0 4px; }
+.cg-lbl:first-child { padding-top: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 2px; }
+.chip {
+  padding: 5px 10px;
+  border: 1.5px solid var(--border); border-radius: 18px;
+  background: white; font-family: 'Noto Sans JP', sans-serif;
+  font-size: 11px; color: var(--mid); cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+  transition: all 0.13s; white-space: nowrap;
+}
+.chip.on { border-color: var(--red); background: var(--red-lt); color: var(--red); font-weight: 500; }
+
+/* ── AMOUNT ── */
+.amt-row { display: flex; gap: 8px; align-items: stretch; }
+.amt-badge {
+  background: var(--navy); color: var(--gold);
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 14px; font-weight: 700;
+  padding: 0 13px; border-radius: var(--rs);
+  display: flex; align-items: center; flex-shrink: 0;
+}
+input[type=number] {
+  flex: 1; padding: 10px 12px;
+  border: 1.5px solid var(--border); border-radius: var(--rs);
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 28px; font-weight: 700; color: var(--navy);
+  background: var(--paper); outline: none; -webkit-appearance: none; width: 0;
+}
+input[type=number]:focus { border-color: var(--red); }
+
+/* ── DETAILS ── */
+textarea {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: var(--rs);
+  font-family: 'Noto Sans JP', sans-serif; font-size: 14px;
+  color: var(--navy); background: var(--paper);
+  outline: none; resize: none; min-height: 52px;
+}
+textarea:focus { border-color: var(--red); }
+
+/* ── PRIORITY ── */
+.pri-row { display: flex; gap: 7px; }
+.pri-btn {
+  flex: 1; padding: 8px 3px;
+  border: 2px solid var(--border); border-radius: var(--rs);
+  background: white; font-size: 9.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  cursor: pointer; text-align: center;
+  font-family: 'Noto Sans JP', sans-serif; transition: all 0.13s;
+}
+.pri-ico { font-size: 14px; display: block; margin-bottom: 3px; }
+.pri-btn[data-p="Essential"].on    { border-color: var(--green); background: var(--green-lt); color: var(--green); }
+.pri-btn[data-p="Good to Have"].on { border-color: var(--amber); background: var(--amber-lt); color: var(--amber); }
+.pri-btn[data-p="Luxury"].on       { border-color: var(--blue);  background: var(--blue-lt);  color: var(--blue);  }
+
+/* ── SUBMIT ── */
+.submit-btn {
+  width: 100%; padding: 14px;
+  background: var(--red); color: white; border: none;
+  border-radius: var(--r); font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(200,16,46,0.28);
+  transition: all 0.15s; margin-bottom: 4px;
+}
+.submit-btn:active { transform: scale(0.98); box-shadow: none; }
+.cancel-btn {
+  width: 100%; padding: 11px;
+  background: var(--warm); color: var(--mid); border: none;
+  border-radius: var(--r); font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+
+/* ── LEDGER ── */
+.ldg-ctrl { display: flex; gap: 7px; margin-bottom: 10px; }
+.ldg-search {
+  flex: 1; padding: 8px 11px;
+  border: 1.5px solid var(--border); border-radius: var(--rs);
+  font-family: inherit; font-size: 13px;
+  background: white; color: var(--navy); outline: none;
+}
+.ldg-search:focus { border-color: var(--red); }
+select {
+  padding: 8px 10px; border: 1.5px solid var(--border);
+  border-radius: var(--rs); background: white;
+  font-size: 12px; color: var(--mid); font-family: inherit;
+}
+
+.day-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 4px 5px;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 11.5px; font-weight: 700; color: var(--soft);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.day-tot { font-size: 11px; color: var(--mid); font-weight: 500; }
+
+.ecard {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--rs); padding: 10px 12px;
+  margin-bottom: 7px; box-shadow: var(--sh);
+  position: relative; overflow: hidden;
+}
+.ecard::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+}
+.ecard.Essential::before    { background: var(--green); }
+.ecard.GTH::before          { background: var(--amber); }
+.ecard.Luxury::before       { background: var(--blue);  }
+
+.er1 { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.ecat { font-size: 11px; font-weight: 600; color: var(--mid); background: var(--warm); border-radius: 6px; padding: 2px 7px; display: inline-flex; align-items: center; gap: 4px; }
+.eamt { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 17px; font-weight: 700; color: var(--navy); white-space: nowrap; text-align: right; }
+.eamt-sub { font-size: 9.5px; color: var(--soft); text-align: right; margin-top: 1px; }
+.edet { font-size: 11.5px; color: var(--mid); margin-top: 4px; line-height: 1.4; }
+.er2 { display: flex; justify-content: space-between; align-items: center; margin-top: 7px; }
+.epri {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; padding: 2px 7px; border-radius: 5px;
+}
+.epri.Essential    { background: var(--green-lt); color: var(--green); }
+.epri.GTH          { background: var(--amber-lt); color: var(--amber); }
+.epri.Luxury       { background: var(--blue-lt);  color: var(--blue);  }
+.eactions { display: flex; gap: 4px; }
+.eact-btn {
+  border: none; background: var(--warm); border-radius: 7px;
+  font-size: 13px; cursor: pointer; color: var(--soft);
+  padding: 4px 8px; transition: all 0.12s;
+}
+.eact-btn:active { background: var(--border); }
+
+.empty { text-align: center; padding: 50px 20px; color: var(--soft); }
+.empty-ico { font-size: 44px; margin-bottom: 10px; }
+.empty p { font-size: 13px; line-height: 1.6; }
+
+/* ── ANALYTICS ── */
+.sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.sum-card { background: white; border: 1px solid var(--border); border-radius: var(--rs); padding: 10px 12px; box-shadow: var(--sh); }
+.sum-lbl { font-size: 8.5px; color: var(--soft); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 3px; }
+.sum-val { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 19px; font-weight: 700; color: var(--navy); }
+.sum-sub { font-size: 8.5px; color: var(--soft); margin-top: 2px; }
+
+.asec { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 10px; box-shadow: var(--sh); }
+.asec-ttl { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 5px; }
+.brow { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.blbl { font-size: 10.5px; color: var(--mid); width: 106px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btrk { flex: 1; height: 7px; background: var(--warm); border-radius: 4px; overflow: hidden; }
+.bfil { height: 100%; border-radius: 4px; background: var(--red); transition: width 0.4s ease; }
+.bval { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 10px; font-weight: 700; color: var(--mid); width: 68px; text-align: right; flex-shrink: 0; }
+
+.rate-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.rate-row:last-child { border-bottom: none; }
+.rdot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+/* ── EXPORT ── */
+.xcard { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 14px 14px 12px; box-shadow: var(--sh); margin-bottom: 10px; }
+.xcard.gold { border-left: 3px solid var(--gold); }
+.xcard-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+.xcard-ico { font-size: 25px; }
+.xcard-ttl { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 15px; font-weight: 700; color: var(--navy); }
+.xcard-desc { font-size: 10.5px; color: var(--soft); margin-top: 2px; line-height: 1.4; }
+.xbtn-row { display: flex; gap: 7px; margin-top: 9px; }
+.xbtn {
+  flex: 1; padding: 10px 6px; border: none; border-radius: var(--rs);
+  font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px;
+  font-weight: 700; cursor: pointer; transition: all 0.14s;
+}
+.xbtn:active { opacity: 0.85; transform: scale(0.97); }
+.xbtn-dark  { background: var(--navy); color: white; }
+.xbtn-ghost { background: var(--warm); color: var(--mid); border: 1.5px solid var(--border) !important; }
+.xbtn-green { background: #1d6f42; color: white; }
+.xbtn-orng  { background: #c55a11; color: white; }
+.bk-note { font-size: 10px; color: var(--soft); margin-top: 8px; line-height: 1.5; }
+.bk-note strong { color: var(--amber); }
+
+/* ── BOTTOM SHEET MODAL ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(26,26,46,0.55);
+  z-index: 200; display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.22s;
+}
+.overlay.on { opacity: 1; pointer-events: all; }
+.sheet {
+  background: white; border-radius: 20px 20px 0 0;
+  padding: 20px 18px calc(28px + var(--safe-bot));
+  width: 100%; max-width: 500px;
+  transform: translateY(100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  max-height: 92dvh; overflow-y: auto;
+}
+.overlay.on .sheet { transform: translateY(0); }
+.sheet-ttl { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+.sheet-desc { font-size: 13px; color: var(--mid); margin-bottom: 16px; }
+.sheet-btns { display: flex; gap: 9px; }
+.sht-btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; }
+.sbt-cancel  { background: var(--warm); color: var(--mid); }
+.sbt-confirm { background: var(--red);  color: white; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: calc(80px + var(--safe-bot)); left: 50%;
+  transform: translateX(-50%) translateY(14px);
+  background: var(--navy); color: white;
+  padding: 8px 18px; border-radius: 20px;
+  font-size: 12.5px; opacity: 0; transition: all 0.24s;
+  pointer-events: none; z-index: 999;
+  white-space: nowrap; max-width: 92vw; text-align: center;
+}
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.spin {
+  display: inline-block; width: 12px; height: 12px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+  border-radius: 50%; animation: spin 0.65s linear infinite;
+  vertical-align: middle; margin-right: 5px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#restore-input { display: none; }
+
+@media (max-width: 360px) {
+  .chip { font-size: 10.5px; padding: 5px 9px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div>
+    <div class="hdr-logo">旅<em>　</em>Expenses</div>
+    <div class="hdr-sub">Japan Trip · v2</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-lbl">Total Spent</div>
+    <div class="hdr-total" id="hdr-total">¥ 0</div>
+    <div class="hdr-cnt" id="hdr-cnt">0 entries</div>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab on" id="tab-add"      onclick="showTab('add')">     <span class="ti">＋</span>Add</button>
+  <button class="tab"    id="tab-ledger"   onclick="showTab('ledger')">  <span class="ti">📋</span>Ledger</button>
+  <button class="tab"    id="tab-analytics"onclick="showTab('analytics')"><span class="ti">📊</span>Analytics</button>
+  <button class="tab"    id="tab-export"   onclick="showTab('export')">  <span class="ti">⬇️</span>Export</button>
+</nav>
+
+<!-- SCREENS -->
+<div class="screens">
+
+  <!-- ══ ADD / EDIT ══ -->
+  <div class="scr on" id="scr-add">
+
+    <div class="fsec">
+      <div class="fsec-hdr"><div class="snum">1</div><div class="slbl">Date</div></div>
+      <div class="fbody"><input type="date" id="f-date"></div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-hdr"><div class="snum">2</div><div class="slbl">Currency</div></div>
+      <div class="fbody">
+        <div class="curr-row">
+          <button class="curr-btn on" onclick="setCurr('JPY',this)">JPY<span class="curr-sub">¥ Yen</span></button>
+          <button class="curr-btn"    onclick="setCurr('SGD',this)">SGD<span class="curr-sub">S$ Dollar</span></button>
+          <button class="curr-btn"    onclick="setCurr('USD',this)">USD<span class="curr-sub">$ Dollar</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-hdr"><div class="snum">3</div><div class="slbl">Category</div></div>
+      <div class="fbody" id="cat-container"></div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-hdr"><div class="snum">4</div><div class="slbl">Amount</div></div>
+      <div class="fbody">
+        <div class="amt-row">
+          <div class="amt-badge" id="amt-badge">¥</div>
+          <input type="number" id="f-amount" placeholder="0" inputmode="decimal">
+        </div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-hdr"><div class="snum">5</div><div class="slbl">Details</div></div>
+      <div class="fbody"><textarea id="f-details" rows="2" placeholder="e.g. Ramen at Ichiran, 2 bowls…"></textarea></div>
+    </div>
+
+    <div class="fsec">
+      <div class="fsec-hdr"><div class="snum">6</div><div class="slbl">Spend Class</div></div>
+      <div class="fbody">
+        <div class="pri-row">
+          <button class="pri-btn" data-p="Essential"    onclick="setPri(this)"><span class="pri-ico">✅</span>Essential</button>
+          <button class="pri-btn" data-p="Good to Have" onclick="setPri(this)"><span class="pri-ico">🌟</span>Good to Have</button>
+          <button class="pri-btn" data-p="Luxury"       onclick="setPri(this)"><span class="pri-ico">💎</span>Luxury</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitEntry()">Record Expense →</button>
+    <button class="cancel-btn" id="cancel-btn" onclick="cancelEdit()" style="display:none">Cancel Edit</button>
+
+  </div>
+
+  <!-- ══ LEDGER ══ -->
+  <div class="scr" id="scr-ledger">
+    <div class="ldg-ctrl">
+      <input class="ldg-search" id="ldg-search" placeholder="🔍  Search…" oninput="renderLedger()">
+      <select id="ldg-filter" onchange="renderLedger()">
+        <option value="">All</option>
+        <option value="Essential">Essential</option>
+        <option value="Good to Have">Good to Have</option>
+        <option value="Luxury">Luxury</option>
+      </select>
+    </div>
+    <div id="ldg-list"></div>
+  </div>
+
+  <!-- ══ ANALYTICS ══ -->
+  <div class="scr" id="scr-analytics">
+    <div class="sum-grid" id="sum-cards"></div>
+    <div id="rates-box"></div>
+    <div id="charts"></div>
+  </div>
+
+  <!-- ══ EXPORT ══ -->
+  <div class="scr" id="scr-export">
+
+    <div class="xcard gold">
+      <div class="xcard-hdr"><div class="xcard-ico">🛡️</div>
+        <div><div class="xcard-ttl">Data Backup</div>
+          <div class="xcard-desc">Save all entries as JSON · Restore anytime</div></div>
+      </div>
+      <div class="xbtn-row">
+        <button class="xbtn xbtn-dark"  onclick="backupData()">⬇ Backup to File</button>
+        <button class="xbtn xbtn-ghost" onclick="document.getElementById('restore-input').click()">⬆ Restore</button>
+      </div>
+      <input type="file" id="restore-input" accept=".json" onchange="restoreData(event)">
+      <div class="bk-note"><strong>⚠️ Backup daily:</strong> Tap "Backup to File" each evening → save to Files / iCloud Drive. Independent of app storage — your safety net.</div>
+    </div>
+
+    <div class="xcard">
+      <div class="xcard-hdr"><div class="xcard-ico">📗</div>
+        <div><div class="xcard-ttl">Excel Report</div>
+          <div class="xcard-desc">5-sheet workbook: raw data, by category, by day, by priority, summary</div></div>
+      </div>
+      <button class="xbtn xbtn-green" id="btn-excel" onclick="exportScript('excel')" style="margin-top:9px;width:100%">Download Excel Script (.py)</button>
+    </div>
+
+    <div class="xcard">
+      <div class="xcard-hdr"><div class="xcard-ico">📙</div>
+        <div><div class="xcard-ttl">PowerPoint Deck</div>
+          <div class="xcard-desc">7-slide analysis: category chart, daily trend, spend class, top 5, takeaways</div></div>
+      </div>
+      <button class="xbtn xbtn-orng" id="btn-ppt" onclick="exportScript('ppt')" style="margin-top:9px;width:100%">Download PPT Script (.js)</button>
+    </div>
+
+    <div class="xcard" style="font-size:11px;color:var(--soft);line-height:1.7">
+      <strong style="color:var(--mid)">💡 How to use export scripts</strong><br>
+      Download the script → run on your laptop:<br>
+      <code>python generate_excel.py</code><br>
+      <code>node generate_ppt.js</code><br>
+      Scripts are pre-loaded with all your expense data.
+    </div>
+
+  </div>
+
+</div>
+
+<!-- DELETE MODAL -->
+<div class="overlay" id="del-modal">
+  <div class="sheet">
+    <div class="sheet-ttl">Delete this expense?</div>
+    <div class="sheet-desc" id="del-desc">This cannot be undone.</div>
+    <div class="sheet-btns">
+      <button class="sht-btn sbt-cancel"  onclick="closeModal('del-modal')">Cancel</button>
+      <button class="sht-btn sbt-confirm" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ══════════════════════════════════════
+//  CONSTANTS & STATE
+// ══════════════════════════════════════
+const SK = 'tabi_expenses_v2';   // NEVER change — localStorage key
+const RK = 'tabi_rates_v2';
+
+const CATS = [
+  { g:'✈️ Transport',      i:['Flights','Taxi','Public Transport'] },
+  { g:'🏨 Accommodation',  i:['Hotels'] },
+  { g:'🍜 Food & Drinks',  i:['Food','Snacks','Liquor'] },
+  { g:'🎭 Experiences',    i:['Tourism','Communication'] },
+  { g:'🛍️ Shopping',       i:['Shopping — Apparel (Divya)','Shopping — Apparel (Kumar)','Shopping — Apparel (Kids)','Shopping — Luxury','Shopping — Others','Souvenirs','Gifts'] },
+  { g:'💊 Other',          i:['Medical','Miscellaneous'] },
+];
+const ICONS = {
+  'Flights':'✈️','Taxi':'🚖','Public Transport':'🚃','Hotels':'🏨',
+  'Food':'🍱','Snacks':'🍡','Liquor':'🍺','Tourism':'🗼','Communication':'📱',
+  'Shopping — Apparel (Divya)':'👗','Shopping — Apparel (Kumar)':'👔',
+  'Shopping — Apparel (Kids)':'🧒','Shopping — Luxury':'💎','Shopping — Others':'🛒',
+  'Souvenirs':'🪆','Gifts':'🎁','Medical':'💊','Miscellaneous':'📦'
+};
+const CSYM = {JPY:'¥',SGD:'S$',USD:'$'};
+
+let expenses = [];
+let rates    = {JPY:1,SGD:0.0089,USD:0.0067,updatedAt:null};
+let selCur   = 'JPY';
+let selCat   = null;
+let selPri   = null;
+let editId   = null;   // null = new entry, string = editing existing
+let pendDel  = null;
+
+// ══════════════════════════════════════
+//  STORAGE — localStorage (on-device)
+// ══════════════════════════════════════
+function load() {
+  try { const d = localStorage.getItem(SK); if (d) expenses = JSON.parse(d); } catch(e) { expenses=[]; }
+  try { const r = localStorage.getItem(RK); if (r) rates = JSON.parse(r); } catch(e) {}
+}
+function save() {
+  try { localStorage.setItem(SK, JSON.stringify(expenses)); }
+  catch(e) { toast('⚠️ Save failed — storage full?'); }
+}
+function saveRates() {
+  try { localStorage.setItem(RK, JSON.stringify(rates)); } catch(e) {}
+}
+
+// ══════════════════════════════════════
+//  RATES
+// ══════════════════════════════════════
+async function fetchRates() {
+  try {
+    const stale = !rates.updatedAt || Date.now()-new Date(rates.updatedAt).getTime() > 3*3600*1000;
+    if (!stale) { renderRates(); return; }
+    const r = await fetch('https://open.er-api.com/v6/latest/JPY');
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    rates = {JPY:1,SGD:d.rates.SGD,USD:d.rates.USD,INR:d.rates.INR,EUR:d.rates.EUR,updatedAt:new Date().toISOString()};
+    saveRates();
+  } catch(e) {}
+  renderRates();
+  updateHeader();
+}
+function toJPY(a,c) {
+  if(c==='JPY') return a;
+  if(c==='SGD') return a/(rates.SGD||0.0089);
+  if(c==='USD') return a/(rates.USD||0.0067);
+  return a;
+}
+function fmtJPY(n) { return '¥'+Math.round(n).toLocaleString(); }
+function fmtSGD(n) { return 'S$'+(n*(rates.SGD||0.0089)).toFixed(0); }
+
+// ══════════════════════════════════════
+//  BUILD CATEGORY UI
+// ══════════════════════════════════════
+function buildCats() {
+  const c = document.getElementById('cat-container');
+  c.innerHTML = '';
+  for (const grp of CATS) {
+    const lbl = document.createElement('div');
+    lbl.className = 'cg-lbl'; lbl.textContent = grp.g; c.appendChild(lbl);
+    const chips = document.createElement('div'); chips.className = 'chips';
+    for (const item of grp.i) {
+      const b = document.createElement('button');
+      b.className = 'chip'; b.dataset.cat = item;
+      b.innerHTML = `${ICONS[item]||'•'} ${item}`;
+      b.onclick = () => { document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); selCat=item; };
+      chips.appendChild(b);
+    }
+    c.appendChild(chips);
+  }
+}
+
+// ══════════════════════════════════════
+//  FORM CONTROLS
+// ══════════════════════════════════════
+function setCurr(c, el) {
+  selCur = c;
+  document.querySelectorAll('.curr-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('amt-badge').textContent = CSYM[c];
+}
+function setPri(el) {
+  document.querySelectorAll('.pri-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on'); selPri = el.dataset.p;
+}
+function setToday() {
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+}
+function resetForm() {
+  editId = null;
+  setToday();
+  selCat = null; selCur = 'JPY'; selPri = null;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  document.querySelectorAll('.curr-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelector('.curr-btn').classList.add('on');
+  document.getElementById('amt-badge').textContent = '¥';
+  document.querySelectorAll('.pri-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-details').value = '';
+  document.getElementById('submit-btn').textContent = 'Record Expense →';
+  document.getElementById('cancel-btn').style.display = 'none';
+}
+
+// ══════════════════════════════════════
+//  SUBMIT (add or update)
+// ══════════════════════════════════════
+function submitEntry() {
+  const date   = document.getElementById('f-date').value;
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const details= document.getElementById('f-details').value.trim();
+  if (!date)              return toast('⚠️ Select a date');
+  if (!selCat)            return toast('⚠️ Select a category');
+  if (!amount || amount<=0) return toast('⚠️ Enter a valid amount');
+  if (!selPri)            return toast('⚠️ Select a spend class');
+
+  const entry = { id: editId||Date.now().toString(), date, currency:selCur, category:selCat, amount, details, priority:selPri, amountJPY:toJPY(amount,selCur) };
+
+  if (editId) {
+    const idx = expenses.findIndex(e=>e.id===editId);
+    if (idx>-1) expenses[idx] = entry;
+    toast('✅ Entry updated!');
+  } else {
+    expenses.unshift(entry);
+    toast('✅ Expense recorded!');
+  }
+
+  save();
+  resetForm();
+  updateHeader();
+}
+
+function cancelEdit() {
+  resetForm();
+  toast('Edit cancelled');
+}
+
+// ══════════════════════════════════════
+//  EDIT — pre-fill form
+// ══════════════════════════════════════
+function startEdit(id) {
+  const e = expenses.find(x=>x.id===id);
+  if (!e) return;
+  editId = id;
+  showTab('add');
+
+  // Date
+  document.getElementById('f-date').value = e.date;
+  // Currency
+  selCur = e.currency;
+  document.querySelectorAll('.curr-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.curr-btn').forEach(b=>{ if(b.textContent.startsWith(e.currency)) b.classList.add('on'); });
+  document.getElementById('amt-badge').textContent = CSYM[e.currency]||'¥';
+  // Category
+  selCat = e.category;
+  setTimeout(()=>{ // chips rendered after buildCats
+    document.querySelectorAll('.chip').forEach(c=>{
+      if(c.dataset.cat===e.category) c.classList.add('on');
+      else c.classList.remove('on');
+    });
+  }, 50);
+  // Amount
+  document.getElementById('f-amount').value = e.amount;
+  // Details
+  document.getElementById('f-details').value = e.details||'';
+  // Priority
+  selPri = e.priority;
+  document.querySelectorAll('.pri-btn').forEach(b=>{
+    if(b.dataset.p===e.priority) b.classList.add('on');
+    else b.classList.remove('on');
+  });
+  // Button labels
+  document.getElementById('submit-btn').textContent = 'Save Changes ✓';
+  document.getElementById('cancel-btn').style.display = 'block';
+
+  // Scroll to top
+  document.getElementById('scr-add').scrollTop = 0;
+}
+
+// ══════════════════════════════════════
+//  DELETE
+// ══════════════════════════════════════
+function promptDelete(id, cat) {
+  pendDel = id;
+  document.getElementById('del-desc').textContent = `"${cat}" — this cannot be undone.`;
+  document.getElementById('del-modal').classList.add('on');
+}
+function confirmDelete() {
+  if (!pendDel) return;
+  expenses = expenses.filter(e=>e.id!==pendDel);
+  save(); closeModal('del-modal'); renderLedger(); updateHeader();
+  toast('🗑️ Deleted');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('on');
+  pendDel = null;
+}
+
+// ══════════════════════════════════════
+//  HEADER
+// ══════════════════════════════════════
+function updateHeader() {
+  const total = expenses.reduce((s,e)=>s+e.amountJPY,0);
+  document.getElementById('hdr-total').textContent = '¥ '+Math.round(total).toLocaleString();
+  document.getElementById('hdr-cnt').textContent   = expenses.length+' entr'+(expenses.length===1?'y':'ies');
+}
+
+// ══════════════════════════════════════
+//  LEDGER
+// ══════════════════════════════════════
+function renderLedger() {
+  const q = (document.getElementById('ldg-search').value||'').toLowerCase();
+  const f = document.getElementById('ldg-filter').value;
+  const el= document.getElementById('ldg-list');
+
+  const list = expenses.filter(e=>
+    (!q || e.category.toLowerCase().includes(q)||(e.details||'').toLowerCase().includes(q)) &&
+    (!f || e.priority===f)
+  );
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">🗒️</div><p>No expenses yet.<br>Add your first entry!</p></div>`;
+    return;
+  }
+
+  const byDate = {};
+  for (const e of list) (byDate[e.date]||(byDate[e.date]=[])).push(e);
+  const dates  = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+
+  let html = '';
+  for (const d of dates) {
+    const dayJPY = byDate[d].reduce((s,e)=>s+e.amountJPY,0);
+    const wd = new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    html += `<div class="day-hdr"><span>${wd}</span><span class="day-tot">¥${Math.round(dayJPY).toLocaleString()}</span></div>`;
+    for (const e of byDate[d]) {
+      const pc  = e.priority==='Good to Have'?'GTH':e.priority;
+      const notJPY = e.currency!=='JPY';
+      const safeCat = e.category.replace(/'/g,"\\'");
+      html += `<div class="ecard ${pc}">
+        <div class="er1">
+          <div class="ecat">${ICONS[e.category]||'•'} ${e.category}</div>
+          <div>
+            <div class="eamt">${CSYM[e.currency]||''}${e.amount.toLocaleString()}<span style="font-size:10px;color:var(--soft);font-weight:400"> ${e.currency}</span></div>
+            ${notJPY?`<div class="eamt-sub">≈ ${fmtJPY(e.amountJPY)}</div>`:''}
+          </div>
+        </div>
+        ${e.details?`<div class="edet">${e.details}</div>`:''}
+        <div class="er2">
+          <span class="epri ${pc}">${e.priority}</span>
+          <div class="eactions">
+            <button class="eact-btn" onclick="startEdit('${e.id}')" title="Edit">✏️</button>
+            <button class="eact-btn" onclick="promptDelete('${e.id}','${safeCat}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+      </div>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════
+//  ANALYTICS
+// ══════════════════════════════════════
+function renderAnalytics() {
+  const totalJPY = expenses.reduce((s,e)=>s+e.amountJPY,0);
+  const days     = [...new Set(expenses.map(e=>e.date))].length;
+
+  document.getElementById('sum-cards').innerHTML = `
+    <div class="sum-card"><div class="sum-lbl">Total (JPY)</div><div class="sum-val">¥${Math.round(totalJPY).toLocaleString()}</div><div class="sum-sub">${expenses.length} transactions</div></div>
+    <div class="sum-card"><div class="sum-lbl">Total (SGD)</div><div class="sum-val">S$${Math.round(totalJPY*(rates.SGD||0.0089)).toLocaleString()}</div><div class="sum-sub">≈ $${Math.round(totalJPY*(rates.USD||0.0067))} USD</div></div>
+    <div class="sum-card"><div class="sum-lbl">Trip Days</div><div class="sum-val">${days}</div><div class="sum-sub">with spend recorded</div></div>
+    <div class="sum-card"><div class="sum-lbl">Daily Avg</div><div class="sum-val">¥${days?Math.round(totalJPY/days).toLocaleString():0}</div><div class="sum-sub">per day</div></div>`;
+
+  renderRates();
+
+  if (!expenses.length) {
+    document.getElementById('charts').innerHTML = `<div class="empty"><div class="empty-ico">📊</div><p>Add expenses to see analytics</p></div>`;
+    return;
+  }
+
+  const byCat={}, byDay={}, byPri={Essential:0,'Good to Have':0,Luxury:0};
+  for (const e of expenses) {
+    byCat[e.category] = (byCat[e.category]||0)+e.amountJPY;
+    byDay[e.date]     = (byDay[e.date]||0)+e.amountJPY;
+    byPri[e.priority] = (byPri[e.priority]||0)+e.amountJPY;
+  }
+
+  const catS = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const dayS = Object.entries(byDay).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const catMax = catS[0]?.[1]||1, dayMax=dayS[0]?.[1]||1;
+  const priCol = {Essential:'var(--green)','Good to Have':'var(--amber)',Luxury:'var(--blue)'};
+
+  const catBars = catS.map(([c,a])=>`<div class="brow"><div class="blbl">${ICONS[c]||''} ${c.replace('Shopping — ','').replace('Apparel ','')}</div><div class="btrk"><div class="bfil" style="width:${(a/catMax*100).toFixed(1)}%"></div></div><div class="bval">¥${Math.round(a).toLocaleString()}</div></div>`).join('');
+  const dayBars = dayS.map(([d,a])=>{
+    const lbl=new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    return `<div class="brow"><div class="blbl">${lbl}</div><div class="btrk"><div class="bfil" style="width:${(a/dayMax*100).toFixed(1)}%;background:var(--gold)"></div></div><div class="bval">¥${Math.round(a).toLocaleString()}</div></div>`;
+  }).join('');
+  const priBars = Object.entries(byPri).map(([p,a])=>`<div class="brow"><div class="blbl">${p}</div><div class="btrk"><div class="bfil" style="width:${totalJPY?(a/totalJPY*100).toFixed(1):0}%;background:${priCol[p]}"></div></div><div class="bval">${totalJPY?(a/totalJPY*100).toFixed(1):0}%</div></div>`).join('');
+
+  document.getElementById('charts').innerHTML = `
+    <div class="asec"><div class="asec-ttl">📂 By Category</div>${catBars}</div>
+    <div class="asec"><div class="asec-ttl">📅 Top Spend Days</div>${dayBars}</div>
+    <div class="asec"><div class="asec-ttl">🏷️ By Spend Class</div>${priBars}</div>`;
+}
+
+function renderRates() {
+  const live = !!rates.updatedAt;
+  const upd  = live ? new Date(rates.updatedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : 'fallback';
+  document.getElementById('rates-box').innerHTML = `
+    <div class="asec">
+      <div class="asec-ttl"><span class="rdot" style="background:${live?'var(--green)':'#ccc'}"></span>Exchange Rates (1 JPY =)</div>
+      <div class="rate-row"><span style="font-weight:600">SGD</span><span style="font-family:'Zen Kaku Gothic New',sans-serif">${(rates.SGD||0.0089).toFixed(5)}</span></div>
+      <div class="rate-row"><span style="font-weight:600">USD</span><span style="font-family:'Zen Kaku Gothic New',sans-serif">${(rates.USD||0.0067).toFixed(5)}</span></div>
+      ${rates.INR?`<div class="rate-row"><span style="font-weight:600">INR</span><span style="font-family:'Zen Kaku Gothic New',sans-serif">${rates.INR.toFixed(4)}</span></div>`:''}
+      <div style="font-size:9px;color:var(--soft);margin-top:6px">Updated: ${upd}</div>
+    </div>`;
+}
+
+// ══════════════════════════════════════
+//  BACKUP & RESTORE
+// ══════════════════════════════════════
+function backupData() {
+  if (!expenses.length) return toast('⚠️ No data to backup yet');
+  const payload = {version:2,exportedAt:new Date().toISOString(),count:expenses.length,rates,expenses};
+  const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `tabi_backup_${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast(`✅ Backup saved — ${expenses.length} entries`);
+}
+
+async function restoreData(event) {
+  const file = event.target.files[0]; if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    if (!Array.isArray(payload.expenses)) throw 0;
+    const existIds = new Set(expenses.map(e=>e.id));
+    const newOnes  = payload.expenses.filter(e=>!existIds.has(e.id));
+    expenses = [...newOnes,...expenses].sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+    save();
+    if (payload.rates) { rates=payload.rates; saveRates(); }
+    updateHeader();
+    toast(`✅ Restored ${newOnes.length} new entries`);
+  } catch(e) { toast('❌ Invalid backup file'); }
+  event.target.value='';
+}
+
+// ══════════════════════════════════════
+//  EXPORT SCRIPTS
+// ══════════════════════════════════════
+async function exportScript(type) {
+  if (!expenses.length) return toast('⚠️ No expenses to export');
+  const btnId = type==='excel'?'btn-excel':'btn-ppt';
+  const btn   = document.getElementById(btnId);
+  const orig  = btn.innerHTML;
+  btn.innerHTML = '<span class="spin"></span>Generating…'; btn.disabled = true;
+
+  const excelPrompt = `Generate a self-contained Python script using openpyxl that creates "Japan_Trip_Expenses.xlsx".
+EXPENSES: ${JSON.stringify(expenses)}
+RATES (1JPY=x): ${JSON.stringify(rates)}
+5 sheets: "Summary" (totals, date range, averages, rates), "Raw Data" (all columns + Amount_JPY/SGD/USD), "By Category" (sorted desc + %), "By Day" (daily totals JPY/SGD/USD), "By Priority" (Essential/Good to Have/Luxury).
+Professional: navy header fills (#1a1a2e), alternating rows, bold, auto column width, no errors.
+RETURN ONLY the python code block. No explanation.`;
+
+  const pptPrompt = `Generate a self-contained Node.js script using pptxgenjs that creates "Japan_Trip_Analysis.pptx".
+EXPENSES: ${JSON.stringify(expenses)}
+RATES: ${JSON.stringify(rates)}
+7 slides: 1.Title with date range+total 2.Executive summary 6 metric cards 3.Category bar chart 4.Daily spend bars 5.Spend class breakdown 6.Top 5 expenses table 7.Key takeaways.
+Navy #1A1A2E + Red #C8102E + Gold #C9A84C. Professional theme.
+RETURN ONLY the js code block. No explanation.`;
+
+  try {
+    const res  = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:type==='excel'?excelPrompt:pptPrompt}]})});
+    const data = await res.json();
+    const text = data.content.map(c=>c.text||'').join('');
+    const match= text.match(/```(?:python|javascript|js)?\n([\s\S]*?)```/);
+    if (!match) throw new Error('No code block');
+    const fname = type==='excel'?'generate_excel.py':'generate_ppt.js';
+    const blob  = new Blob([match[1]],{type:'text/plain'});
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement('a'); a.href=url; a.download=fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast(`✅ ${fname} downloaded`);
+  } catch(e) { toast('❌ Export failed — try again'); }
+  finally { btn.innerHTML=orig; btn.disabled=false; }
+}
+
+// ══════════════════════════════════════
+//  TAB NAVIGATION
+// ══════════════════════════════════════
+function showTab(tab) {
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('scr-'+tab).classList.add('on');
+  document.getElementById('tab-'+tab).classList.add('on');
+  if (tab==='ledger')    renderLedger();
+  if (tab==='analytics') renderAnalytics();
+}
+
+// ══════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  clearTimeout(toastTimer);
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('on');
+  toastTimer=setTimeout(()=>t.classList.remove('on'),2800);
+}
+
+// ══════════════════════════════════════
+//  SERVICE WORKER (PWA offline cache)
+// ══════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  const swCode = `
+const CACHE='tabi-v2';
+const ASSETS=['./'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
+self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('./'))))); `;
+  const swBlob = new Blob([swCode],{type:'application/javascript'});
+  const swUrl  = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swUrl).catch(()=>{});
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+load();
+setToday();
+buildCats();
+updateHeader();
+fetchRates();
+</script>
+</body>
+</html>
